@@ -18,6 +18,7 @@ const elements = {
   password: document.getElementById("password"),
   loginMessage: document.getElementById("login-message"),
   signInButton: document.getElementById("sign-in-button"),
+  forgotPasswordButton: document.getElementById("forgot-password-button"),
   signOutButton: document.getElementById("sign-out-button"),
   connectionStatus: document.getElementById("connection-status"),
   dashboardPanel: document.getElementById("dashboard-panel"),
@@ -238,7 +239,40 @@ if (!hasConfig) {
     elements.password.value = "";
     await checkSession();
   });
+  elements.forgotPasswordButton.addEventListener("click", async () => {
+    const email = elements.email.value.trim();
 
+    if (!email) {
+      elements.loginMessage.textContent =
+        "Enter your email address first, then select Forgot password.";
+      elements.email.focus();
+      return;
+    }
+
+    elements.loginMessage.textContent = "";
+    elements.forgotPasswordButton.disabled = true;
+    elements.forgotPasswordButton.textContent = "Sending…";
+
+    const recoveryUrl = new URL("recover.html", window.location.href).href;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: recoveryUrl
+    });
+
+    elements.forgotPasswordButton.disabled = false;
+    elements.forgotPasswordButton.textContent = "Forgot password?";
+
+    if (error) {
+      console.error("Password reset request failed:", error);
+      elements.loginMessage.textContent =
+        "Unable to request a reset email. Verify the address and try again.";
+      return;
+    }
+
+    elements.loginMessage.textContent =
+      "If that account exists, a password-reset email has been sent.";
+  });
+ 
   elements.signOutButton.addEventListener("click", async () => {
   elements.signOutButton.disabled = true;
   elements.loginMessage.textContent = "";
