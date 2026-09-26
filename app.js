@@ -14,37 +14,81 @@ const elements = {
   connectionStatus: document.getElementById("connection-status"),
   configError: document.getElementById("config-error"),
   configErrorMessage: document.getElementById("config-error-message"),
-  ownerSessionMessage: document.getElementById("owner-session-message")
+  ownerSessionMessage: document.getElementById("owner-session-message"),
+  leadCount: document.getElementById("lead-count"),
+  buyerCount: document.getElementById("buyer-count"),
+  marketCount: document.getElementById("market-count"),
+  messageCount: document.getElementById("message-count"),
+  recentLeadsBody: document.getElementById("recent-leads-body"),
+  marketsBody: document.getElementById("markets-body")
 };
 
-function setMessage(text) {
-  elements.loginMessage.textContent = text;
+function setStatus(text, state = "pending") {
   elements.connectionStatus.textContent = text;
+
+  if (state === "connected") {
+    elements.connectionStatus.style.borderColor = "#27785f";
+    elements.connectionStatus.style.background = "#102a24";
+    elements.connectionStatus.style.color = "#a6f3d3";
+    return;
+  }
+
+  if (state === "error") {
+    elements.connectionStatus.style.borderColor = "#8a3d3d";
+    elements.connectionStatus.style.background = "#301a1a";
+    elements.connectionStatus.style.color = "#ffb1b1";
+    return;
+  }
+
+  elements.connectionStatus.style.borderColor = "";
+  elements.connectionStatus.style.background = "";
+  elements.connectionStatus.style.color = "";
+}
+
+function showOnly(section) {
+  elements.configError.classList.add("hidden");
+  elements.loginPanel.classList.add("hidden");
+  elements.dashboardPanel.classList.add("hidden");
+
+  if (section) {
+    section.classList.remove("hidden");
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "—")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function yesNo(value) {
+  return value ? "Yes" : "No";
+}
+
+function locationLabel(row) {
+  return [row.city, row.county, row.state_code]
+    .filter(Boolean)
+    .join(", ") || "—";
+}
+
+function setTableMessage(body, columns, message) {
+  body.innerHTML = `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
 
 function showLogin(message = "") {
-  elements.dashboardPanel.classList.add("hidden");
-  elements.loginPanel.classList.remove("hidden");
+  setStatus("Sign in required");
+  showOnly(elements.loginPanel);
   elements.signOutButton.classList.add("hidden");
-  setMessage(message || "Ready. Enter email and password, then tap Sign in.");
+  elements.loginMessage.textContent = message;
 }
 
-function showError(message) {
-  elements.configError.classList.remove("hidden");
+function showConfigError(message) {
+  setStatus("Configuration error", "error");
+  showOnly(elements.configError);
   elements.configErrorMessage.textContent = message;
-  elements.loginPanel.classList.add("hidden");
-  elements.dashboardPanel.classList.add("hidden");
-  elements.signOutButton.classList.add("hidden");
-  elements.connectionStatus.textContent = "Configuration error";
-}
-
-function showSignedIn(user) {
-  elements.loginPanel.classList.add("hidden");
-  elements.dashboardPanel.classList.remove("hidden");
-  elements.signOutButton.classList.remove("hidden");
-  elements.connectionStatus.textContent = "Authenticated owner";
-  elements.ownerSessionMessage.textContent =
-    `Authentication succeeded for ${user.email || "the owner account"}. Dashboard data loading is intentionally paused until this login test is confirmed.`;
 }
 
 const validConfig =
@@ -55,8 +99,8 @@ const validConfig =
   config.SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_");
 
 if (!validConfig) {
-  showError(
-    "Configuration is invalid. Confirm config.js has the base Project URL ending in .supabase.co and an sb_publishable_ key."
+  showConfigError(
+    "Configuration is invalid. Confirm config.js contains the base Project URL ending in .supabase.co and a publishable key beginning with sb_publishable_."
   );
 } else {
   const supabase = createClient(
@@ -71,18 +115,144 @@ if (!validConfig) {
     }
   );
 
+  async function loadDashboard() {
+    showOnly(elements.dashboardPanel);
+    elements.signOutButton.classList.remove("hidden");
+    setStatus("Authenticated owner", "connected");
+    elements.ownerSessionMessage.textContent =
+      "Protected read-only access confirmed.";
+
+    setTableMessage(elements.recentLeadsBody, 5, "Loading protected workflow data…");
+    setTableMessage(elements.marketsBody, 5, "Loading protected market permissions…");
+
+    const [
+      leadCountResult,
+      buyerCountResult,
+      marketCountResult,
+      messageCountResult,
+      leadsResult,
+      marketsResult
+    ] = await Promise.all([
+      supabase.from("leads").select("*", { count: "exact", head: true }),
+      supabase
+        .from("buyers")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true),
+      supabase
+        .from("markets")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true),
+      supabase
+        .from("outbound_messages")
+        .select("*", { count: "exact", head: true })
+        .in("send_status", ["draft", "queued"]),
+      supabase
+        .from("leads")
+        .select(
+          "stage, asset_class, city, county, state_code, contract_signed, human_marketing_approval, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("markets")
+        .select(
+          "city, county, state_code, status, research_allowed, outreach_allowed, marketing_allowed, active"
+        )
+        .eq("active", true)
+        .order("state_code", { ascending: true })
+        .limit(20)
+    ]);
+
+    const countResults = [
+      [leadCountResult, elements.leadCount],
+      [buyerCountResult, elements.buyerCount],
+      [marketCountResult, elements.marketCount],
+      [messageCountResult, elements.messageCount]
+    ];
+
+    for (const [result, target] of countResults) {
+      target.textContent = result.error ? "—" : String(result.count ?? 0);
+    }
+
+    if (leadsResult.error) {
+      console.error("Leads query failed:", leadsResult.error);
+      setTableMessage(
+        elements.recentLeadsBody,
+        5,
+        "Protected lead workflow data could not be loaded."
+      );
+    } else if (!leadsResult.data?.length) {
+      setTableMessage(elements.recentLeadsBody, 5, "No leads found.");
+    } else {
+      elements.recentLeadsBody.innerHTML = leadsResult.data
+        .map(
+          (lead) => `
+            <tr>
+              <td>${escapeHtml(lead.stage)}</td>
+              <td>${escapeHtml(lead.asset_class)}</td>
+              <td>${escapeHtml(locationLabel(lead))}</td>
+              <td>${yesNo(lead.contract_signed)}</td>
+              <td>${yesNo(lead.human_marketing_approval)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    if (marketsResult.error) {
+      console.error("Markets query failed:", marketsResult.error);
+      setTableMessage(
+        elements.marketsBody,
+        5,
+        "Protected market permissions could not be loaded."
+      );
+    } else if (!marketsResult.data?.length) {
+      setTableMessage(elements.marketsBody, 5, "No active markets found.");
+    } else {
+      elements.marketsBody.innerHTML = marketsResult.data
+        .map(
+          (market) => `
+            <tr>
+              <td>${escapeHtml(locationLabel(market))}</td>
+              <td>${escapeHtml(market.status)}</td>
+              <td>${yesNo(market.research_allowed)}</td>
+              <td>${yesNo(market.outreach_allowed)}</td>
+              <td>${yesNo(market.marketing_allowed)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    const errors = [
+      leadCountResult.error,
+      buyerCountResult.error,
+      marketCountResult.error,
+      messageCountResult.error,
+      leadsResult.error,
+      marketsResult.error
+    ].filter(Boolean);
+
+    if (errors.length) {
+      elements.ownerSessionMessage.textContent =
+        "Signed in, but one or more protected read-only queries were unavailable.";
+    }
+  }
+
   elements.signInButton.addEventListener("click", async () => {
     const email = elements.email.value.trim();
     const password = elements.password.value;
 
     if (!email || !password) {
-      setMessage("Enter both your email address and password.");
+      elements.loginMessage.textContent =
+        "Enter both your email address and password.";
       return;
     }
 
+    elements.loginMessage.textContent = "";
     elements.signInButton.disabled = true;
     elements.signInButton.textContent = "Signing in…";
-    setMessage("Step 1 of 3: Sending sign-in request…");
+    setStatus("Signing in");
 
     const timeout = new Promise((_, reject) => {
       window.setTimeout(() => {
@@ -97,19 +267,21 @@ if (!validConfig) {
       ]);
 
       if (error) {
-        setMessage(`Sign-in rejected: ${error.message}`);
+        showLogin("Sign-in failed. Check your email and password, then try again.");
         return;
       }
 
       if (!data?.user || !data?.session) {
-        setMessage("Sign-in response did not include an active user session.");
-        return;
+        throw new Error("Sign-in completed but no active session was returned.");
       }
 
       elements.password.value = "";
-      showSignedIn(data.user);
+      await loadDashboard();
     } catch (error) {
-      setMessage(`Sign-in request failed: ${error.message}`);
+      console.error("Sign-in request error:", error);
+      showLogin(
+        "Sign-in could not be completed. Refresh the page and try again."
+      );
     } finally {
       elements.signInButton.disabled = false;
       elements.signInButton.textContent = "Sign in";
@@ -119,13 +291,12 @@ if (!validConfig) {
   elements.signOutButton.addEventListener("click", () => {
     elements.email.value = "";
     elements.password.value = "";
-    showLogin("Signed out. Enter email and password, then tap Sign in.");
+    showLogin("Signed out.");
   });
 
   elements.forgotPasswordButton.addEventListener("click", () => {
-    setMessage(
-      "Password recovery is paused until the direct login test succeeds."
-    );
+    elements.loginMessage.textContent =
+      "Password recovery remains paused while the read-only dashboard test is completed.";
   });
 
   showLogin();
