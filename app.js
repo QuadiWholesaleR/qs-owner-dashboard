@@ -197,21 +197,23 @@ if (!hasConfig) {
       elements.ownerSessionMessage.textContent =
         "Signed in, but one or more protected dashboard queries were denied or unavailable. Check the browser console and RLS configuration.";
     }
+ 
+  async function checkSession() {
+  setStatus("Checking session");
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    setStatus("Sign in required");
+    showOnly(elements.loginPanel);
+    elements.signOutButton.classList.add("hidden");
+    return;
   }
 
-  async function checkSession() {
-    setStatus("Checking session");
-
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error || !data.user) {
-      setStatus("Sign in required");
-      showOnly(elements.loginPanel);
-      elements.signOutButton.classList.add("hidden");
-      return;
-    }
-
-    await loadDashboard(data.user);
+  await loadDashboard(session.user);
+  
   }
   elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
