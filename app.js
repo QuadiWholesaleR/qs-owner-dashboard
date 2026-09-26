@@ -213,33 +213,57 @@ if (!hasConfig) {
 
     await loadDashboard(data.user);
   }
-
   elements.loginForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    elements.loginMessage.textContent = "";
-    elements.signInButton.disabled = true;
-    elements.signInButton.textContent = "Signing in…";
+  const email = elements.email.value.trim();
+  const password = elements.password.value;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: elements.email.value.trim(),
-      password: elements.password.value
-    });
+  if (!email || !password) {
+    elements.loginMessage.textContent =
+      "Enter both your email address and password.";
+    return;
+  }
 
-    elements.signInButton.disabled = false;
-    elements.signInButton.textContent = "Sign in";
+  elements.loginMessage.textContent = "";
+  elements.signInButton.disabled = true;
+  elements.signInButton.textContent = "Signing in…";
+  setStatus("Signing in");
+
+  const timeout = new Promise((_, reject) => {
+    window.setTimeout(() => {
+      reject(new Error("Sign-in request timed out."));
+    }, 15000);
+  });
+
+  try {
+    const { error } = await Promise.race([
+      supabase.auth.signInWithPassword({ email, password }),
+      timeout
+    ]);
 
     if (error) {
+      console.error("Sign-in failed:", error);
       elements.loginMessage.textContent =
-        "Sign-in failed. Check the email and password, then try again.";
+        "Sign-in failed. Check your email and password, then try again.";
       setStatus("Sign-in failed", "error");
       return;
     }
 
     elements.password.value = "";
     await checkSession();
-  });
-  elements.forgotPasswordButton.addEventListener("click", async () => {
+  } catch (error) {
+    console.error("Sign-in request error:", error);
+    elements.loginMessage.textContent =
+      "Sign-in did not finish. Check your connection, refresh the page, and try again.";
+    setStatus("Sign-in unavailable", "error");
+  } finally {
+    elements.signInButton.disabled = false;
+    elements.signInButton.textContent = "Sign in";
+  }
+});
+ 
+   elements.forgotPasswordButton.addEventListener("click", async () => {
     const email = elements.email.value.trim();
 
     if (!email) {
