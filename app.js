@@ -14,7 +14,6 @@ const elements = {
   configError: document.getElementById("config-error"),
   configErrorMessage: document.getElementById("config-error-message"),
   loginPanel: document.getElementById("login-panel"),
-  loginForm: document.getElementById("login-form"),
   email: document.getElementById("email"),
   password: document.getElementById("password"),
   loginMessage: document.getElementById("login-message"),
@@ -226,7 +225,7 @@ if (!hasConfig) {
     }
   }
 
-  elements.loginForm.addEventListener("submit", async (event) => {
+  elements.signInButton.addEventListener("click", async (event) => {
     event.preventDefault();
 
     const email = elements.email.value.trim();
