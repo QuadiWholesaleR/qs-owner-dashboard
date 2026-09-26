@@ -14,11 +14,16 @@
       <div>
         <p class="eyebrow">Owner-only workspace</p>
         <h1>Q's Wholesale Engine</h1>
-        <p class="subtitle" id="subtitle">Secure read-only dashboard</p>
+        <p class="subtitle">Secure read-only dashboard</p>
       </div>
+
       <div class="header-actions">
         <span class="status" id="connection-status">Loading</span>
-        <button class="button button-secondary hidden" id="sign-out-button" type="button">
+        <button
+          class="button button-secondary hidden"
+          id="sign-out-button"
+          type="button"
+        >
           Sign out
         </button>
       </div>
@@ -35,15 +40,34 @@
 
       <form id="login-form" novalidate>
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" autocomplete="email" required>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+        >
 
-        <button class="button" id="sign-in-button" type="submit">Sign in</button>
-<p class="form-message" id="login-message" aria-live="polite"></p>
-<button class="text-button" id="forgot-password-button" type="button">
-  Forgot password?
-</button>
-</form>
-</section>
+        <label for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        >
+
+        <button class="button" id="sign-in-button" type="button">
+          Sign in
+        </button>
+
+        <p class="form-message" id="login-message" aria-live="polite"></p>
+
+        <button class="text-button" id="forgot-password-button" type="button">
+          Forgot password?
+        </button>
+      </form>
+    </section>
 
     <section class="hidden" id="dashboard-panel">
       <section class="notice success">
@@ -76,7 +100,10 @@
       <section class="dashboard-grid">
         <article class="card">
           <h2>Recent leads</h2>
-          <p class="card-intro">Workflow status only. No owner contact details or property addresses are shown.</p>
+          <p class="card-intro">
+            Workflow status only. No owner contact details or property addresses are shown.
+          </p>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -89,7 +116,9 @@
                 </tr>
               </thead>
               <tbody id="recent-leads-body">
-                <tr><td colspan="5">Loading protected data…</td></tr>
+                <tr>
+                  <td colspan="5">Loading protected data…</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -97,7 +126,10 @@
 
         <article class="card">
           <h2>Market permissions</h2>
-          <p class="card-intro">Current operational permissions from your protected market records.</p>
+          <p class="card-intro">
+            Current operational permissions from your protected market records.
+          </p>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -110,7 +142,9 @@
                 </tr>
               </thead>
               <tbody id="markets-body">
-                <tr><td colspan="5">Loading protected data…</td></tr>
+                <tr>
+                  <td colspan="5">Loading protected data…</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -119,7 +153,10 @@
     </section>
 
     <footer>
-      <p>Read-only owner dashboard. Do not store secret keys, contact data, contracts, or message bodies in this repository.</p>
+      <p>
+        Read-only owner dashboard. Do not store secret keys, contact data,
+        contracts, or message bodies in this repository.
+      </p>
     </footer>
   </main>
 
