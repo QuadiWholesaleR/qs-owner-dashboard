@@ -255,8 +255,8 @@ if (!hasConfig) {
   } catch (error) {
     console.error("Sign-in request error:", error);
     elements.loginMessage.textContent =
-      "Sign-in did not finish. Check your connection, refresh the page, and try again.";
-    setStatus("Sign-in unavailable", "error");
+      elements.loginMessage.textContent =
+        "Sign-in timed out after 15 seconds. Refresh the page, confirm config.js uses the base Project URL ending in .supabase.co, then try again.";
   } finally {
     elements.signInButton.disabled = false;
     elements.signInButton.textContent = "Sign in";
