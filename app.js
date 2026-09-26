@@ -240,16 +240,27 @@ if (!hasConfig) {
   });
 
   elements.signOutButton.addEventListener("click", async () => {
-    elements.signOutButton.disabled = true;
-    await supabase.auth.signOut({ scope: "local" });
-    elements.signOutButton.disabled = false;
-    elements.email.value = "";
-    elements.password.value = "";
-    elements.loginMessage.textContent = "";
-    setStatus("Signed out");
-    showOnly(elements.loginPanel);
-    elements.signOutButton.classList.add("hidden");
-  });
+  elements.signOutButton.disabled = true;
+  elements.loginMessage.textContent = "";
+
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+
+  elements.signOutButton.disabled = false;
+
+  if (error) {
+    console.error("Sign-out failed:", error);
+    elements.loginMessage.textContent =
+      "Could not complete sign-out. Clear this site's browser data, then try again.";
+    setStatus("Sign-out failed", "error");
+    return;
+  }
+
+  elements.email.value = "";
+  elements.password.value = "";
+  setStatus("Signed out");
+  showOnly(elements.loginPanel);
+  elements.signOutButton.classList.add("hidden");
+});
 
   checkSession();
 }
