@@ -87,125 +87,11 @@ function setTableMessage(body, columns, message) {
   body.innerHTML = `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
 
-function showLogin() {
+function showLogin(message = "") {
   setStatus("Sign in required");
   showOnly(elements.loginPanel);
   elements.signOutButton.classList.add("hidden");
-  elements.loginMessage.textContent = "";
-}
-
-async function loadDashboard(user) {
-  showOnly(elements.dashboardPanel);
-  elements.signOutButton.classList.remove("hidden");
-  setStatus("Authenticated owner", "connected");
-
-  elements.ownerSessionMessage.textContent =
-    `Protected read-only access confirmed for ${user.email || "owner account"}.`;
-
-  const [
-    leadCountResult,
-    buyerCountResult,
-    marketCountResult,
-    messageCountResult,
-    leadsResult,
-    marketsResult
-  ] = await Promise.all([
-    supabase.from("leads").select("*", { count: "exact", head: true }),
-    supabase
-      .from("buyers")
-      .select("*", { count: "exact", head: true })
-      .eq("active", true),
-    supabase
-      .from("markets")
-      .select("*", { count: "exact", head: true })
-      .eq("active", true),
-    supabase
-      .from("outbound_messages")
-      .select("*", { count: "exact", head: true })
-      .in("send_status", ["draft", "queued"]),
-    supabase
-      .from("leads")
-      .select(
-        "stage, asset_class, city, county, state_code, contract_signed, human_marketing_approval, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("markets")
-      .select(
-        "city, county, state_code, status, research_allowed, outreach_allowed, marketing_allowed, active"
-      )
-      .eq("active", true)
-      .order("state_code", { ascending: true })
-      .limit(20)
-  ]);
-
-  const countResults = [
-    [leadCountResult, elements.leadCount],
-    [buyerCountResult, elements.buyerCount],
-    [marketCountResult, elements.marketCount],
-    [messageCountResult, elements.messageCount]
-  ];
-
-  for (const [result, target] of countResults) {
-    target.textContent = result.error ? "—" : String(result.count ?? 0);
-  }
-
-  if (leadsResult.error) {
-    setTableMessage(elements.recentLeadsBody, 5, "Unable to load leads.");
-    console.error("Leads query failed:", leadsResult.error.message);
-  } else if (!leadsResult.data.length) {
-    setTableMessage(elements.recentLeadsBody, 5, "No leads found.");
-  } else {
-    elements.recentLeadsBody.innerHTML = leadsResult.data
-      .map(
-        (lead) => `
-          <tr>
-            <td>${escapeHtml(lead.stage)}</td>
-            <td>${escapeHtml(lead.asset_class)}</td>
-            <td>${escapeHtml(locationLabel(lead))}</td>
-            <td>${yesNo(lead.contract_signed)}</td>
-            <td>${yesNo(lead.human_marketing_approval)}</td>
-          </tr>
-        `
-      )
-      .join("");
-  }
-
-  if (marketsResult.error) {
-    setTableMessage(elements.marketsBody, 5, "Unable to load markets.");
-    console.error("Markets query failed:", marketsResult.error.message);
-  } else if (!marketsResult.data.length) {
-    setTableMessage(elements.marketsBody, 5, "No active markets found.");
-  } else {
-    elements.marketsBody.innerHTML = marketsResult.data
-      .map(
-        (market) => `
-          <tr>
-            <td>${escapeHtml(locationLabel(market))}</td>
-            <td>${escapeHtml(market.status)}</td>
-            <td>${yesNo(market.research_allowed)}</td>
-            <td>${yesNo(market.outreach_allowed)}</td>
-            <td>${yesNo(market.marketing_allowed)}</td>
-          </tr>
-        `
-      )
-      .join("");
-  }
-
-  const errors = [
-    leadCountResult.error,
-    buyerCountResult.error,
-    marketCountResult.error,
-    messageCountResult.error,
-    leadsResult.error,
-    marketsResult.error
-  ].filter(Boolean);
-
-  if (errors.length) {
-    elements.ownerSessionMessage.textContent =
-      "Signed in, but one or more protected dashboard queries were denied or unavailable.";
-  }
+  elements.loginMessage.textContent = message;
 }
 
 if (!hasConfig) {
@@ -219,12 +105,126 @@ if (!hasConfig) {
     config.SUPABASE_PUBLISHABLE_KEY,
     {
       auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
       }
     }
   );
+
+  async function loadDashboard(user) {
+    showOnly(elements.dashboardPanel);
+    elements.signOutButton.classList.remove("hidden");
+    setStatus("Authenticated owner", "connected");
+
+    elements.ownerSessionMessage.textContent =
+      `Protected read-only access confirmed for ${user.email || "owner account"}.`;
+
+    const [
+      leadCountResult,
+      buyerCountResult,
+      marketCountResult,
+      messageCountResult,
+      leadsResult,
+      marketsResult
+    ] = await Promise.all([
+      supabase.from("leads").select("*", { count: "exact", head: true }),
+      supabase
+        .from("buyers")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true),
+      supabase
+        .from("markets")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true),
+      supabase
+        .from("outbound_messages")
+        .select("*", { count: "exact", head: true })
+        .in("send_status", ["draft", "queued"]),
+      supabase
+        .from("leads")
+        .select(
+          "stage, asset_class, city, county, state_code, contract_signed, human_marketing_approval, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("markets")
+        .select(
+          "city, county, state_code, status, research_allowed, outreach_allowed, marketing_allowed, active"
+        )
+        .eq("active", true)
+        .order("state_code", { ascending: true })
+        .limit(20)
+    ]);
+
+    const countResults = [
+      [leadCountResult, elements.leadCount],
+      [buyerCountResult, elements.buyerCount],
+      [marketCountResult, elements.marketCount],
+      [messageCountResult, elements.messageCount]
+    ];
+
+    for (const [result, target] of countResults) {
+      target.textContent = result.error ? "—" : String(result.count ?? 0);
+    }
+
+    if (leadsResult.error) {
+      setTableMessage(elements.recentLeadsBody, 5, "Unable to load leads.");
+      console.error("Leads query failed:", leadsResult.error.message);
+    } else if (!leadsResult.data.length) {
+      setTableMessage(elements.recentLeadsBody, 5, "No leads found.");
+    } else {
+      elements.recentLeadsBody.innerHTML = leadsResult.data
+        .map(
+          (lead) => `
+            <tr>
+              <td>${escapeHtml(lead.stage)}</td>
+              <td>${escapeHtml(lead.asset_class)}</td>
+              <td>${escapeHtml(locationLabel(lead))}</td>
+              <td>${yesNo(lead.contract_signed)}</td>
+              <td>${yesNo(lead.human_marketing_approval)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    if (marketsResult.error) {
+      setTableMessage(elements.marketsBody, 5, "Unable to load markets.");
+      console.error("Markets query failed:", marketsResult.error.message);
+    } else if (!marketsResult.data.length) {
+      setTableMessage(elements.marketsBody, 5, "No active markets found.");
+    } else {
+      elements.marketsBody.innerHTML = marketsResult.data
+        .map(
+          (market) => `
+            <tr>
+              <td>${escapeHtml(locationLabel(market))}</td>
+              <td>${escapeHtml(market.status)}</td>
+              <td>${yesNo(market.research_allowed)}</td>
+              <td>${yesNo(market.outreach_allowed)}</td>
+              <td>${yesNo(market.marketing_allowed)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    const errors = [
+      leadCountResult.error,
+      buyerCountResult.error,
+      marketCountResult.error,
+      messageCountResult.error,
+      leadsResult.error,
+      marketsResult.error
+    ].filter(Boolean);
+
+    if (errors.length) {
+      elements.ownerSessionMessage.textContent =
+        "Signed in, but one or more protected dashboard queries were denied or unavailable.";
+    }
+  }
 
   elements.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -257,95 +257,36 @@ if (!hasConfig) {
 
       if (error) {
         console.error("Sign-in failed:", error);
-        elements.loginMessage.textContent =
-          "Sign-in failed. Check your email and password, then try again.";
-        setStatus("Sign-in failed", "error");
+        showLogin("Sign-in failed. Check your email and password, then try again.");
         return;
       }
 
-      if (!data?.user) {
-        throw new Error("Sign-in completed but no authenticated user was returned.");
+      if (!data?.user || !data?.session) {
+        throw new Error("Sign-in completed but no active session was returned.");
       }
 
       elements.password.value = "";
       await loadDashboard(data.user);
     } catch (error) {
       console.error("Sign-in request error:", error);
-      elements.loginMessage.textContent =
-        "Sign-in timed out after 15 seconds. Refresh the page, confirm config.js uses the base Project URL ending in .supabase.co, then try again.";
-      setStatus("Sign-in unavailable", "error");
+      showLogin(
+        "Sign-in timed out after 15 seconds. Check your connection and try again."
+      );
     } finally {
       elements.signInButton.disabled = false;
       elements.signInButton.textContent = "Sign in";
     }
   });
 
-  elements.forgotPasswordButton.addEventListener("click", async () => {
-    const email = elements.email.value.trim();
-
-    if (!email) {
-      elements.loginMessage.textContent =
-        "Enter your email address first, then select Forgot password.";
-      elements.email.focus();
-      return;
-    }
-
-    elements.loginMessage.textContent = "";
-    elements.forgotPasswordButton.disabled = true;
-    elements.forgotPasswordButton.textContent = "Sending…";
-
-    try {
-      const recoveryUrl = new URL("recover.html", window.location.href).href;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: recoveryUrl
-      });
-
-      if (error) {
-        console.error("Password reset request failed:", error);
-        elements.loginMessage.textContent =
-          "Unable to request a reset email. Verify the address and try again.";
-        return;
-      }
-
-      elements.loginMessage.textContent =
-        "If that account exists, a password-reset email has been sent.";
-    } catch (error) {
-      console.error("Password reset request error:", error);
-      elements.loginMessage.textContent =
-        "Unable to request a reset email right now. Refresh and try again.";
-    } finally {
-      elements.forgotPasswordButton.disabled = false;
-      elements.forgotPasswordButton.textContent = "Forgot password?";
-    }
+  elements.forgotPasswordButton.addEventListener("click", () => {
+    elements.loginMessage.textContent =
+      "Password recovery is temporarily paused while dashboard sign-in is being stabilized. Use your password manager or Supabase dashboard account recovery if needed.";
   });
 
-  elements.signOutButton.addEventListener("click", async () => {
-    elements.signOutButton.disabled = true;
-    elements.loginMessage.textContent = "";
-
-    try {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-
-      if (error) {
-        console.error("Sign-out failed:", error);
-        elements.loginMessage.textContent =
-          "Could not complete sign-out. Clear this site's browser data, then try again.";
-        setStatus("Sign-out failed", "error");
-        return;
-      }
-
-      elements.email.value = "";
-      elements.password.value = "";
-      showLogin();
-    } catch (error) {
-      console.error("Sign-out request error:", error);
-      elements.loginMessage.textContent =
-        "Could not complete sign-out. Clear this site's browser data, then try again.";
-      setStatus("Sign-out failed", "error");
-    } finally {
-      elements.signOutButton.disabled = false;
-    }
+  elements.signOutButton.addEventListener("click", () => {
+    elements.email.value = "";
+    elements.password.value = "";
+    showLogin("Signed out.");
   });
 
   showLogin();
