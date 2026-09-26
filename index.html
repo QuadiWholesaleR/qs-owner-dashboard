@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <title>Q's Wholesale Engine — Owner Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,47 +14,116 @@
       <div>
         <p class="eyebrow">Owner-only workspace</p>
         <h1>Q's Wholesale Engine</h1>
-        <p class="subtitle">Secure dashboard shell</p>
+        <p class="subtitle" id="subtitle">Secure read-only dashboard</p>
       </div>
-      <span class="status">Configuration pending</span>
+      <div class="header-actions">
+        <span class="status" id="connection-status">Loading</span>
+        <button class="button button-secondary hidden" id="sign-out-button" type="button">
+          Sign out
+        </button>
+      </div>
     </header>
 
-    <section class="notice">
-      <h2>Dashboard setup in progress</h2>
-      <p>
-        This page contains no deal data, contact records, database credentials,
-        or server-side keys. Sign-in and database access will be enabled after
-        the static shell is confirmed live.
-      </p>
+    <section class="notice hidden" id="config-error" role="alert">
+      <h2>Configuration required</h2>
+      <p id="config-error-message"></p>
     </section>
 
-    <section class="grid" aria-label="Planned dashboard modules">
-      <article class="card">
-        <h2>Overview</h2>
-        <p>Lead, buyer, market, and message counts will appear here after secure authentication is connected.</p>
-      </article>
+    <section class="login-panel hidden" id="login-panel" aria-labelledby="login-heading">
+      <h2 id="login-heading">Owner sign in</h2>
+      <p>Sign in with the Supabase Auth owner account created for this dashboard.</p>
 
-      <article class="card">
-        <h2>Leads</h2>
-        <p>Recent lead workflow status will be available only to the signed-in owner.</p>
-      </article>
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" required>
 
-      <article class="card">
-        <h2>Markets</h2>
-        <p>Research, outreach, contract, and marketing permissions will be shown here.</p>
-      </article>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
 
-      <article class="card">
-        <h2>Compliance</h2>
-        <p>Review requirements and system guardrails will be summarized here.</p>
-      </article>
+        <button class="button" id="sign-in-button" type="submit">Sign in</button>
+        <p class="form-message" id="login-message" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="hidden" id="dashboard-panel">
+      <section class="notice success">
+        <h2>Authenticated owner session</h2>
+        <p id="owner-session-message">Checking protected access…</p>
+      </section>
+
+      <section class="metrics-grid" aria-label="Read-only dashboard totals">
+        <article class="metric-card">
+          <p class="metric-label">Leads</p>
+          <p class="metric-value" id="lead-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Active buyers</p>
+          <p class="metric-value" id="buyer-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Active markets</p>
+          <p class="metric-value" id="market-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Draft / queued messages</p>
+          <p class="metric-value" id="message-count">—</p>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card">
+          <h2>Recent leads</h2>
+          <p class="card-intro">Workflow status only. No owner contact details or property addresses are shown.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Stage</th>
+                  <th scope="col">Asset class</th>
+                  <th scope="col">Market</th>
+                  <th scope="col">Signed</th>
+                  <th scope="col">Marketing approval</th>
+                </tr>
+              </thead>
+              <tbody id="recent-leads-body">
+                <tr><td colspan="5">Loading protected data…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Market permissions</h2>
+          <p class="card-intro">Current operational permissions from your protected market records.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Location</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Research</th>
+                  <th scope="col">Outreach</th>
+                  <th scope="col">Marketing</th>
+                </tr>
+              </thead>
+              <tbody id="markets-body">
+                <tr><td colspan="5">Loading protected data…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
     </section>
 
     <footer>
-      <p>Read-only dashboard shell. No confidential data is stored in this repository.</p>
+      <p>Read-only owner dashboard. Do not store secret keys, contact data, contracts, or message bodies in this repository.</p>
     </footer>
   </main>
 
-  <script src="app.js"></script>
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
