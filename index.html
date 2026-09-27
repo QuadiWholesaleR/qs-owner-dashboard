@@ -95,6 +95,21 @@
           <p class="metric-label">Draft / queued messages</p>
           <p class="metric-value" id="message-count">—</p>
         </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Active compliance sources</p>
+          <p class="metric-value" id="compliance-source-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Manual review required</p>
+          <p class="metric-value" id="manual-review-source-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Reviews recorded</p>
+          <p class="metric-value" id="compliance-review-count">—</p>
+        </article>
       </section>
 
       <section class="dashboard-grid">
@@ -171,6 +186,59 @@
               <tbody id="system-activity-body">
                 <tr>
                   <td colspan="4">Loading protected activity…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Official compliance sources</h2>
+          <p class="card-intro">
+            Official reference links for owner-initiated review. This dashboard does not provide legal advice or certify market compliance.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">State</th>
+                  <th scope="col">Source</th>
+                  <th scope="col">Last checked</th>
+                  <th scope="col">Manual review</th>
+                </tr>
+              </thead>
+              <tbody id="compliance-sources-body">
+                <tr>
+                  <td colspan="4">Loading protected compliance sources…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Compliance review history</h2>
+          <p class="card-intro">
+            Owner research records only. Reviews do not automatically activate any market permission.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Market</th>
+                  <th scope="col">Source</th>
+                  <th scope="col">Reviewed</th>
+                  <th scope="col">Finding</th>
+                  <th scope="col">Action taken</th>
+                  <th scope="col">Professional review</th>
+                  <th scope="col">Next review</th>
+                </tr>
+              </thead>
+              <tbody id="compliance-reviews-body">
+                <tr>
+                  <td colspan="7">Loading protected compliance reviews…</td>
                 </tr>
               </tbody>
             </table>
