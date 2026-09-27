@@ -20,7 +20,8 @@ const elements = {
   marketCount: document.getElementById("market-count"),
   messageCount: document.getElementById("message-count"),
   recentLeadsBody: document.getElementById("recent-leads-body"),
-  marketsBody: document.getElementById("markets-body")
+  marketsBody: document.getElementById("markets-body"),
+  systemActivityBody: document.getElementById("system-activity-body")
 };
 
 function setStatus(text, state = "pending") {
@@ -74,6 +75,26 @@ function locationLabel(row) {
     .join(", ") || "—";
 }
 
+function safeDateTime(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
 function setTableMessage(body, columns, message) {
   body.innerHTML = `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
@@ -120,10 +141,23 @@ if (!validConfig) {
     elements.signOutButton.classList.remove("hidden");
     setStatus("Authenticated owner", "connected");
     elements.ownerSessionMessage.textContent =
-      "Protected read-only access confirmed.";
+      "Loading protected read-only operational data…";
 
-    setTableMessage(elements.recentLeadsBody, 5, "Loading protected workflow data…");
-    setTableMessage(elements.marketsBody, 5, "Loading protected market permissions…");
+    setTableMessage(
+      elements.recentLeadsBody,
+      5,
+      "Loading protected workflow data…"
+    );
+    setTableMessage(
+      elements.marketsBody,
+      7,
+      "Loading protected market permissions…"
+    );
+    setTableMessage(
+      elements.systemActivityBody,
+      4,
+      "Loading protected system activity…"
+    );
 
     const [
       leadCountResult,
@@ -131,7 +165,8 @@ if (!validConfig) {
       marketCountResult,
       messageCountResult,
       leadsResult,
-      marketsResult
+      marketsResult,
+      activityResult
     ] = await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
       supabase
@@ -156,11 +191,19 @@ if (!validConfig) {
       supabase
         .from("markets")
         .select(
-          "city, county, state_code, status, research_allowed, outreach_allowed, marketing_allowed, active"
+          "city, county, state_code, asset_class, status, research_allowed, outreach_allowed, contract_workflow_allowed, marketing_allowed, active"
         )
         .eq("active", true)
         .order("state_code", { ascending: true })
-        .limit(20)
+        .order("county", { ascending: true })
+        .order("city", { ascending: true })
+        .order("asset_class", { ascending: true })
+        .limit(30),
+      supabase
+        .from("system_debugging_logs")
+        .select("created_at, level, module_name, message")
+        .order("created_at", { ascending: false })
+        .limit(10)
     ]);
 
     const countResults = [
@@ -203,21 +246,51 @@ if (!validConfig) {
       console.error("Markets query failed:", marketsResult.error);
       setTableMessage(
         elements.marketsBody,
-        5,
+        7,
         "Protected market permissions could not be loaded."
       );
     } else if (!marketsResult.data?.length) {
-      setTableMessage(elements.marketsBody, 5, "No active markets found.");
+      setTableMessage(elements.marketsBody, 7, "No active markets found.");
     } else {
       elements.marketsBody.innerHTML = marketsResult.data
         .map(
           (market) => `
             <tr>
               <td>${escapeHtml(locationLabel(market))}</td>
+              <td>${escapeHtml(market.asset_class)}</td>
               <td>${escapeHtml(market.status)}</td>
               <td>${yesNo(market.research_allowed)}</td>
               <td>${yesNo(market.outreach_allowed)}</td>
+              <td>${yesNo(market.contract_workflow_allowed)}</td>
               <td>${yesNo(market.marketing_allowed)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    if (activityResult.error) {
+      console.error("System activity query failed:", activityResult.error);
+      setTableMessage(
+        elements.systemActivityBody,
+        4,
+        "Protected system activity could not be loaded."
+      );
+    } else if (!activityResult.data?.length) {
+      setTableMessage(
+        elements.systemActivityBody,
+        4,
+        "No safe system activity is available yet."
+      );
+    } else {
+      elements.systemActivityBody.innerHTML = activityResult.data
+        .map(
+          (activity) => `
+            <tr>
+              <td>${escapeHtml(safeDateTime(activity.created_at))}</td>
+              <td>${escapeHtml(activity.level)}</td>
+              <td>${escapeHtml(activity.module_name)}</td>
+              <td>${escapeHtml(activity.message)}</td>
             </tr>
           `
         )
@@ -230,13 +303,13 @@ if (!validConfig) {
       marketCountResult.error,
       messageCountResult.error,
       leadsResult.error,
-      marketsResult.error
+      marketsResult.error,
+      activityResult.error
     ].filter(Boolean);
 
-    if (errors.length) {
-      elements.ownerSessionMessage.textContent =
-        "Signed in, but one or more protected read-only queries were unavailable.";
-    }
+    elements.ownerSessionMessage.textContent = errors.length
+      ? "Authenticated owner session. One or more protected read-only sections were unavailable."
+      : "Protected read-only operational data loaded.";
   }
 
   elements.signInButton.addEventListener("click", async () => {
@@ -296,7 +369,7 @@ if (!validConfig) {
 
   elements.forgotPasswordButton.addEventListener("click", () => {
     elements.loginMessage.textContent =
-      "Password recovery remains paused while the read-only dashboard test is completed.";
+      "Password recovery remains paused while the read-only dashboard is being finalized.";
   });
 
   showLogin();
