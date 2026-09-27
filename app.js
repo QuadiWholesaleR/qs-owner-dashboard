@@ -19,9 +19,14 @@ const elements = {
   buyerCount: document.getElementById("buyer-count"),
   marketCount: document.getElementById("market-count"),
   messageCount: document.getElementById("message-count"),
+  complianceSourceCount: document.getElementById("compliance-source-count"),
+  manualReviewSourceCount: document.getElementById("manual-review-source-count"),
+  complianceReviewCount: document.getElementById("compliance-review-count"),
   recentLeadsBody: document.getElementById("recent-leads-body"),
   marketsBody: document.getElementById("markets-body"),
-  systemActivityBody: document.getElementById("system-activity-body")
+  systemActivityBody: document.getElementById("system-activity-body"),
+  complianceSourcesBody: document.getElementById("compliance-sources-body"),
+  complianceReviewsBody: document.getElementById("compliance-reviews-body")
 };
 
 function setStatus(text, state = "pending") {
@@ -95,6 +100,42 @@ function safeDateTime(value) {
   });
 }
 
+function safeDate(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function safeExternalLink(url, label) {
+  if (typeof url !== "string") {
+    return escapeHtml(label);
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return escapeHtml(label);
+    }
+
+    return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+  } catch {
+    return escapeHtml(label);
+  }
+}
+
 function setTableMessage(body, columns, message) {
   body.innerHTML = `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
@@ -158,15 +199,30 @@ if (!validConfig) {
       4,
       "Loading protected system activity…"
     );
+    setTableMessage(
+      elements.complianceSourcesBody,
+      4,
+      "Loading protected compliance sources…"
+    );
+    setTableMessage(
+      elements.complianceReviewsBody,
+      7,
+      "Loading protected compliance reviews…"
+    );
 
     const [
       leadCountResult,
       buyerCountResult,
       marketCountResult,
       messageCountResult,
+      complianceSourceCountResult,
+      manualReviewSourceCountResult,
+      complianceReviewCountResult,
       leadsResult,
       marketsResult,
-      activityResult
+      activityResult,
+      complianceSourcesResult,
+      complianceReviewsResult
     ] = await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
       supabase
@@ -181,6 +237,18 @@ if (!validConfig) {
         .from("outbound_messages")
         .select("*", { count: "exact", head: true })
         .in("send_status", ["draft", "queued"]),
+      supabase
+        .from("compliance_sources")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true),
+      supabase
+        .from("compliance_sources")
+        .select("*", { count: "exact", head: true })
+        .eq("active", true)
+        .eq("requires_manual_review", true),
+      supabase
+        .from("compliance_reviews")
+        .select("*", { count: "exact", head: true }),
       supabase
         .from("leads")
         .select(
@@ -203,14 +271,32 @@ if (!validConfig) {
         .from("system_debugging_logs")
         .select("created_at, level, module_name, message")
         .order("created_at", { ascending: false })
-        .limit(10)
+        .limit(10),
+      supabase
+        .from("compliance_sources")
+        .select(
+          "state_code, source_name, source_url, last_checked_at, requires_manual_review"
+        )
+        .eq("active", true)
+        .order("state_code", { ascending: true })
+        .limit(25),
+      supabase
+        .from("compliance_reviews")
+        .select(
+          "reviewed_at, finding, action_taken, requires_professional_review, next_review_due, markets(state_code, county, city, asset_class), compliance_sources(source_name, source_url)"
+        )
+        .order("reviewed_at", { ascending: false })
+        .limit(20)
     ]);
 
     const countResults = [
       [leadCountResult, elements.leadCount],
       [buyerCountResult, elements.buyerCount],
       [marketCountResult, elements.marketCount],
-      [messageCountResult, elements.messageCount]
+      [messageCountResult, elements.messageCount],
+      [complianceSourceCountResult, elements.complianceSourceCount],
+      [manualReviewSourceCountResult, elements.manualReviewSourceCount],
+      [complianceReviewCountResult, elements.complianceReviewCount]
     ];
 
     for (const [result, target] of countResults) {
@@ -297,14 +383,91 @@ if (!validConfig) {
         .join("");
     }
 
+    if (complianceSourcesResult.error) {
+      console.error(
+        "Compliance sources query failed:",
+        complianceSourcesResult.error
+      );
+      setTableMessage(
+        elements.complianceSourcesBody,
+        4,
+        "Protected compliance sources could not be loaded."
+      );
+    } else if (!complianceSourcesResult.data?.length) {
+      setTableMessage(
+        elements.complianceSourcesBody,
+        4,
+        "No active compliance sources found."
+      );
+    } else {
+      elements.complianceSourcesBody.innerHTML = complianceSourcesResult.data
+        .map(
+          (source) => `
+            <tr>
+              <td>${escapeHtml(source.state_code)}</td>
+              <td>${safeExternalLink(source.source_url, source.source_name)}</td>
+              <td>${escapeHtml(safeDate(source.last_checked_at))}</td>
+              <td>${yesNo(source.requires_manual_review)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    if (complianceReviewsResult.error) {
+      console.error(
+        "Compliance reviews query failed:",
+        complianceReviewsResult.error
+      );
+      setTableMessage(
+        elements.complianceReviewsBody,
+        7,
+        "Protected compliance reviews could not be loaded."
+      );
+    } else if (!complianceReviewsResult.data?.length) {
+      setTableMessage(
+        elements.complianceReviewsBody,
+        7,
+        "No compliance reviews recorded yet."
+      );
+    } else {
+      elements.complianceReviewsBody.innerHTML = complianceReviewsResult.data
+        .map((review) => {
+          const market = Array.isArray(review.markets)
+            ? review.markets[0]
+            : review.markets;
+          const source = Array.isArray(review.compliance_sources)
+            ? review.compliance_sources[0]
+            : review.compliance_sources;
+
+          return `
+            <tr>
+              <td>${escapeHtml(locationLabel(market || {}))} — ${escapeHtml(market?.asset_class)}</td>
+              <td>${safeExternalLink(source?.source_url, source?.source_name || "—")}</td>
+              <td>${escapeHtml(safeDate(review.reviewed_at))}</td>
+              <td>${escapeHtml(review.finding)}</td>
+              <td>${escapeHtml(review.action_taken)}</td>
+              <td>${yesNo(review.requires_professional_review)}</td>
+              <td>${escapeHtml(safeDate(review.next_review_due))}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
     const errors = [
       leadCountResult.error,
       buyerCountResult.error,
       marketCountResult.error,
       messageCountResult.error,
+      complianceSourceCountResult.error,
+      manualReviewSourceCountResult.error,
+      complianceReviewCountResult.error,
       leadsResult.error,
       marketsResult.error,
-      activityResult.error
+      activityResult.error,
+      complianceSourcesResult.error,
+      complianceReviewsResult.error
     ].filter(Boolean);
 
     elements.ownerSessionMessage.textContent = errors.length
