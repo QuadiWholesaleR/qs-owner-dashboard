@@ -227,6 +227,11 @@ th {
   text-transform: uppercase;
 }
 
+.table-muted {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .hidden {
   display: none !important;
 }
@@ -234,6 +239,22 @@ th {
 footer {
   margin-top: 28px;
   font-size: 0.88rem;
+}
+
+.text-button {
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.text-button:hover,
+.text-button:focus-visible {
+  color: #a6f3d3;
 }
 
 @media (max-width: 760px) {
@@ -260,18 +281,3 @@ footer {
     grid-template-columns: 1fr;
   }
 }
-.text-button {
-  margin-top: 12px;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: var(--accent);
-  cursor: pointer;
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.text-button:hover,
-.text-button:focus-visible {
-  color: #a6f3d3;
-  }
