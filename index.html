@@ -34,9 +34,15 @@
       <p id="config-error-message"></p>
     </section>
 
-    <section class="login-panel" id="login-panel" aria-labelledby="login-heading">
+    <section
+      class="login-panel"
+      id="login-panel"
+      aria-labelledby="login-heading"
+    >
       <h2 id="login-heading">Owner sign in</h2>
-      <p>Sign in with the Supabase Auth owner account created for this dashboard.</p>
+      <p>
+        Sign in with the Supabase Auth owner account created for this dashboard.
+      </p>
 
       <form id="login-form" novalidate>
         <label for="email">Email</label>
@@ -63,7 +69,11 @@
 
         <p class="form-message" id="login-message" aria-live="polite"></p>
 
-        <button class="text-button" id="forgot-password-button" type="button">
+        <button
+          class="text-button"
+          id="forgot-password-button"
+          type="button"
+        >
           Forgot password?
         </button>
       </form>
@@ -110,13 +120,34 @@
           <p class="metric-label">Reviews recorded</p>
           <p class="metric-value" id="compliance-review-count">—</p>
         </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Active research properties</p>
+          <p class="metric-value" id="research-property-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Open research tasks</p>
+          <p class="metric-value" id="research-open-task-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Business-hours follow-ups</p>
+          <p class="metric-value" id="research-business-hours-count">—</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">50+ multifamily research</p>
+          <p class="metric-value" id="research-mf50-count">—</p>
+        </article>
       </section>
 
       <section class="dashboard-grid">
         <article class="card">
           <h2>Recent leads</h2>
           <p class="card-intro">
-            Workflow status only. No owner contact details or property addresses are shown.
+            Workflow status only. No owner contact details or property addresses
+            are shown.
           </p>
 
           <div class="table-wrap">
@@ -170,7 +201,8 @@
         <article class="card">
           <h2>Recent system activity</h2>
           <p class="card-intro">
-            Sanitized operational activity only. Diagnostic payloads and confidential records are not shown.
+            Sanitized operational activity only. Diagnostic payloads and
+            confidential records are not shown.
           </p>
 
           <div class="table-wrap">
@@ -195,7 +227,8 @@
         <article class="card">
           <h2>Official compliance sources</h2>
           <p class="card-intro">
-            Official reference links for owner-initiated review. This dashboard does not provide legal advice or certify market compliance.
+            Official reference links for owner-initiated review. This dashboard
+            does not provide legal advice or certify market compliance.
           </p>
 
           <div class="table-wrap">
@@ -210,7 +243,9 @@
               </thead>
               <tbody id="compliance-sources-body">
                 <tr>
-                  <td colspan="4">Loading protected compliance sources…</td>
+                  <td colspan="4">
+                    Loading protected compliance sources…
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -220,7 +255,8 @@
         <article class="card">
           <h2>Compliance review history</h2>
           <p class="card-intro">
-            Owner research records only. Reviews do not automatically activate any market permission.
+            Owner research records only. Reviews do not automatically activate
+            any market permission.
           </p>
 
           <div class="table-wrap">
@@ -239,6 +275,65 @@
               <tbody id="compliance-reviews-body">
                 <tr>
                   <td colspan="7">Loading protected compliance reviews…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Property research overview</h2>
+          <p class="card-intro">
+            Internal research workflow only. This section is read-only and does
+            not authorize outreach, marketing, offers, applications, or
+            transactions.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Property</th>
+                  <th scope="col">Asset type</th>
+                  <th scope="col">Research status</th>
+                  <th scope="col">Open tasks</th>
+                  <th scope="col">High priority</th>
+                  <th scope="col">Next task</th>
+                </tr>
+              </thead>
+              <tbody id="property-research-body">
+                <tr>
+                  <td colspan="6">
+                    Loading protected property-research data…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Business-hours research queue</h2>
+          <p class="card-intro">
+            Prepare evidence-backed questions for the appropriate source during
+            business hours. This is internal due diligence only.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Property</th>
+                  <th scope="col">Task</th>
+                  <th scope="col">Responsible party</th>
+                  <th scope="col">Prepared question</th>
+                </tr>
+              </thead>
+              <tbody id="research-business-hours-body">
+                <tr>
+                  <td colspan="4">
+                    Loading protected business-hours tasks…
+                  </td>
                 </tr>
               </tbody>
             </table>
