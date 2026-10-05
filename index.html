@@ -14,7 +14,7 @@
       <div>
         <p class="eyebrow">Owner-only workspace</p>
         <h1>Q's Wholesale Engine</h1>
-        <p class="subtitle">Secure read-only dashboard</p>
+        <p class="subtitle">Secure property-research dashboard</p>
       </div>
 
       <div class="header-actions">
@@ -143,6 +143,123 @@
       </section>
 
       <section class="dashboard-grid">
+        <article class="card intake-card">
+          <h2>Start internal property research</h2>
+          <p class="card-intro">
+            Augusta–Richmond County, Georgia only. This creates an internal
+            research record and checklist tasks. It does not authorize
+            outreach, marketing, offers, applications, contracts, or
+            transactions.
+          </p>
+
+          <form id="property-intake-form" novalidate>
+            <div class="form-grid">
+              <div class="form-field form-field-wide">
+                <label for="property-address">Property address</label>
+                <input
+                  id="property-address"
+                  name="property-address"
+                  type="text"
+                  autocomplete="street-address"
+                  maxlength="300"
+                  required
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="parcel-pin">Parcel / PIN</label>
+                <input
+                  id="parcel-pin"
+                  name="parcel-pin"
+                  type="text"
+                  maxlength="150"
+                  required
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="asset-type">Asset type</label>
+                <select id="asset-type" name="asset-type" required>
+                  <option value="vacant_land">Vacant land</option>
+                  <option value="single_family">Single family</option>
+                  <option value="small_multifamily">Small multifamily</option>
+                  <option value="multifamily_50_plus">
+                    Multifamily — 50+ units
+                  </option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="property-city">City</label>
+                <input
+                  id="property-city"
+                  name="property-city"
+                  type="text"
+                  value="Augusta"
+                  readonly
+                  aria-readonly="true"
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="property-state">State</label>
+                <input
+                  id="property-state"
+                  name="property-state"
+                  type="text"
+                  value="GA"
+                  readonly
+                  aria-readonly="true"
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="postal-code">
+                  Postal code <span>(optional)</span>
+                </label>
+                <input
+                  id="postal-code"
+                  name="postal-code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  maxlength="20"
+                >
+              </div>
+            </div>
+
+            <p class="intake-safeguard">
+              New records are created as internal-only research with
+              <code>outreach_status = no_outreach</code>. Confirm the address
+              and PIN before creating a record; the PIN must be unique.
+            </p>
+
+            <button
+              class="button"
+              id="create-property-research-button"
+              type="submit"
+            >
+              Create internal research record
+            </button>
+
+            <p
+              class="form-message intake-message"
+              id="property-intake-message"
+              aria-live="polite"
+            ></p>
+
+            <div
+              class="intake-result hidden"
+              id="property-intake-result"
+              aria-live="polite"
+            >
+              <h3>Internal research record created</h3>
+              <p id="property-intake-result-summary"></p>
+              <p class="table-muted" id="property-intake-result-id"></p>
+            </div>
+          </form>
+        </article>
+
         <article class="card">
           <h2>Recent leads</h2>
           <p class="card-intro">
@@ -344,8 +461,9 @@
 
     <footer>
       <p>
-        Read-only owner dashboard. Do not store secret keys, contact data,
-        contracts, or message bodies in this repository.
+        Owner dashboard. Property-research intake creates internal research
+        records only. Do not store secret keys, owner contact data, contracts,
+        rent rolls, T-12s, or message bodies in this repository.
       </p>
     </footer>
   </main>
