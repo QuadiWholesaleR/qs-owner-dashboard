@@ -2,6 +2,16 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const config = window.APP_CONFIG || {};
 
+const AUGUSTA_MARKET_PROFILE_ID =
+  "5358af25-8e14-47a7-9863-e1f9f355345d";
+
+const APPROVED_ASSET_TYPES = new Set([
+  "vacant_land",
+  "single_family",
+  "small_multifamily",
+  "multifamily_50_plus"
+]);
+
 const elements = {
   loginPanel: document.getElementById("login-panel"),
   dashboardPanel: document.getElementById("dashboard-panel"),
@@ -35,12 +45,32 @@ const elements = {
   ),
   researchMf50Count: document.getElementById("research-mf50-count"),
 
+  propertyIntakeForm: document.getElementById("property-intake-form"),
+  propertyAddress: document.getElementById("property-address"),
+  parcelPin: document.getElementById("parcel-pin"),
+  assetType: document.getElementById("asset-type"),
+  propertyCity: document.getElementById("property-city"),
+  propertyState: document.getElementById("property-state"),
+  postalCode: document.getElementById("postal-code"),
+  createPropertyResearchButton: document.getElementById(
+    "create-property-research-button"
+  ),
+  propertyIntakeMessage: document.getElementById(
+    "property-intake-message"
+  ),
+  propertyIntakeResult: document.getElementById("property-intake-result"),
+  propertyIntakeResultSummary: document.getElementById(
+    "property-intake-result-summary"
+  ),
+  propertyIntakeResultId: document.getElementById(
+    "property-intake-result-id"
+  ),
+
   recentLeadsBody: document.getElementById("recent-leads-body"),
   marketsBody: document.getElementById("markets-body"),
   systemActivityBody: document.getElementById("system-activity-body"),
   complianceSourcesBody: document.getElementById("compliance-sources-body"),
   complianceReviewsBody: document.getElementById("compliance-reviews-body"),
-
   propertyResearchBody: document.getElementById("property-research-body"),
   researchBusinessHoursBody: document.getElementById(
     "research-business-hours-body"
@@ -164,6 +194,35 @@ function setTableMessage(body, columns, message) {
   body.innerHTML = `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
 
+function setIntakeMessage(message = "", isError = false) {
+  elements.propertyIntakeMessage.textContent = message;
+  elements.propertyIntakeMessage.classList.toggle(
+    "form-message-success",
+    Boolean(message) && !isError
+  );
+}
+
+function clearIntakeResult() {
+  elements.propertyIntakeResult.classList.add("hidden");
+  elements.propertyIntakeResultSummary.textContent = "";
+  elements.propertyIntakeResultId.textContent = "";
+}
+
+function showIntakeResult({ propertyId, assetType, taskCount, createdCount }) {
+  const taskLabel = taskCount === 1 ? "task" : "tasks";
+  const createdLabel = createdCount === 1 ? "task" : "tasks";
+
+  elements.propertyIntakeResultSummary.textContent =
+    `Created an internal ${assetType} research record with ${taskCount} checklist ${taskLabel}; ` +
+    `${createdCount} ${createdLabel} were newly created. ` +
+    "Outreach remains locked to no_outreach.";
+
+  elements.propertyIntakeResultId.textContent =
+    `Property research ID: ${propertyId}`;
+
+  elements.propertyIntakeResult.classList.remove("hidden");
+}
+
 function showLogin(message = "") {
   setStatus("Sign in required");
   showOnly(elements.loginPanel);
@@ -175,6 +234,10 @@ function showConfigError(message) {
   setStatus("Configuration error", "error");
   showOnly(elements.configError);
   elements.configErrorMessage.textContent = message;
+}
+
+function normalizeInput(value) {
+  return String(value ?? "").trim();
 }
 
 const validConfig =
@@ -206,7 +269,7 @@ if (!validConfig) {
     elements.signOutButton.classList.remove("hidden");
     setStatus("Authenticated owner", "connected");
     elements.ownerSessionMessage.textContent =
-      "Loading protected read-only operational data…";
+      "Loading protected operational data…";
 
     setTableMessage(
       elements.recentLeadsBody,
@@ -651,8 +714,139 @@ if (!validConfig) {
     ].filter(Boolean);
 
     elements.ownerSessionMessage.textContent = errors.length
-      ? "Authenticated owner session. One or more protected read-only sections were unavailable."
-      : "Protected read-only operational data loaded.";
+      ? "Authenticated owner session. One or more protected sections were unavailable."
+      : "Protected owner dashboard data loaded.";
+  }
+
+  async function createPropertyResearch(event) {
+    event.preventDefault();
+
+    const propertyAddress = normalizeInput(elements.propertyAddress.value);
+    const parcelPin = normalizeInput(elements.parcelPin.value);
+    const assetType = normalizeInput(elements.assetType.value);
+    const city = normalizeInput(elements.propertyCity.value);
+    const state = normalizeInput(elements.propertyState.value);
+    const postalCode = normalizeInput(elements.postalCode.value);
+
+    clearIntakeResult();
+    setIntakeMessage("");
+
+    if (!propertyAddress) {
+      setIntakeMessage("Property address is required.", true);
+      elements.propertyAddress.focus();
+      return;
+    }
+
+    if (!parcelPin) {
+      setIntakeMessage("Parcel / PIN is required.", true);
+      elements.parcelPin.focus();
+      return;
+    }
+
+    if (!APPROVED_ASSET_TYPES.has(assetType)) {
+      setIntakeMessage("Select one of the approved asset types.", true);
+      elements.assetType.focus();
+      return;
+    }
+
+    if (city !== "Augusta" || state !== "GA") {
+      setIntakeMessage(
+        "This intake form is limited to Augusta, GA.",
+        true
+      );
+      return;
+    }
+
+    const confirmationText =
+      `Create an internal research record for:\n\n` +
+      `Address: ${propertyAddress}\n` +
+      `Parcel / PIN: ${parcelPin}\n` +
+      `Asset type: ${assetType}\n` +
+      `Market: Augusta–Richmond County, Georgia\n\n` +
+      `This will create matching research checklist tasks. ` +
+      `It will not authorize outreach, marketing, offers, applications, contracts, or transactions.\n\n` +
+      `Continue?`;
+
+    if (!window.confirm(confirmationText)) {
+      setIntakeMessage("Intake cancelled. No record was created.");
+      return;
+    }
+
+    elements.createPropertyResearchButton.disabled = true;
+    elements.createPropertyResearchButton.textContent =
+      "Creating internal research record…";
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "create_property_research_with_checklist",
+        {
+          p_property_address: propertyAddress,
+          p_parcel_pin: parcelPin,
+          p_asset_type: assetType,
+          p_market_research_profile_id: AUGUSTA_MARKET_PROFILE_ID,
+          p_city: city,
+          p_state: state,
+          p_postal_code: postalCode || null
+        }
+      );
+
+      if (error) {
+        console.error("Property research intake failed:", error);
+
+        const duplicateHint =
+          error.message?.toLowerCase().includes("already exists")
+            ? " A record may already exist for this parcel/PIN."
+            : "";
+
+        setIntakeMessage(
+          `Internal research record could not be created.${duplicateHint}`,
+          true
+        );
+        return;
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        setIntakeMessage(
+          "The intake request returned no checklist rows. No result was confirmed.",
+          true
+        );
+        return;
+      }
+
+      const firstRow = data[0];
+      const propertyId = firstRow.property_research_id;
+      const createdCount = data.filter(
+        (row) => row.task_action === "created"
+      ).length;
+
+      showIntakeResult({
+        propertyId,
+        assetType: firstRow.asset_type,
+        taskCount: data.length,
+        createdCount
+      });
+
+      setIntakeMessage(
+        "Internal research record created. Refreshing protected dashboard data."
+      );
+
+      elements.propertyIntakeForm.reset();
+      elements.propertyCity.value = "Augusta";
+      elements.propertyState.value = "GA";
+      elements.assetType.value = "vacant_land";
+
+      await loadDashboard();
+    } catch (error) {
+      console.error("Property research intake request error:", error);
+      setIntakeMessage(
+        "The intake request could not be completed. Refresh the page and try again.",
+        true
+      );
+    } finally {
+      elements.createPropertyResearchButton.disabled = false;
+      elements.createPropertyResearchButton.textContent =
+        "Create internal research record";
+    }
   }
 
   elements.signInButton.addEventListener("click", async () => {
@@ -708,15 +902,23 @@ if (!validConfig) {
     }
   });
 
-  elements.signOutButton.addEventListener("click", () => {
+  elements.propertyIntakeForm.addEventListener(
+    "submit",
+    createPropertyResearch
+  );
+
+  elements.signOutButton.addEventListener("click", async () => {
+    await supabase.auth.signOut({ scope: "local" });
     elements.email.value = "";
     elements.password.value = "";
+    clearIntakeResult();
+    setIntakeMessage("");
     showLogin("Signed out.");
   });
 
   elements.forgotPasswordButton.addEventListener("click", () => {
     elements.loginMessage.textContent =
-      "Password recovery remains paused while the read-only dashboard is being finalized.";
+      "Password recovery remains paused while the dashboard is being finalized.";
   });
 
   showLogin();
