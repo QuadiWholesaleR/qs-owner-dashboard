@@ -15,18 +15,36 @@ const elements = {
   configError: document.getElementById("config-error"),
   configErrorMessage: document.getElementById("config-error-message"),
   ownerSessionMessage: document.getElementById("owner-session-message"),
+
   leadCount: document.getElementById("lead-count"),
   buyerCount: document.getElementById("buyer-count"),
   marketCount: document.getElementById("market-count"),
   messageCount: document.getElementById("message-count"),
   complianceSourceCount: document.getElementById("compliance-source-count"),
-  manualReviewSourceCount: document.getElementById("manual-review-source-count"),
+  manualReviewSourceCount: document.getElementById(
+    "manual-review-source-count"
+  ),
   complianceReviewCount: document.getElementById("compliance-review-count"),
+
+  researchPropertyCount: document.getElementById("research-property-count"),
+  researchOpenTaskCount: document.getElementById(
+    "research-open-task-count"
+  ),
+  researchBusinessHoursCount: document.getElementById(
+    "research-business-hours-count"
+  ),
+  researchMf50Count: document.getElementById("research-mf50-count"),
+
   recentLeadsBody: document.getElementById("recent-leads-body"),
   marketsBody: document.getElementById("markets-body"),
   systemActivityBody: document.getElementById("system-activity-body"),
   complianceSourcesBody: document.getElementById("compliance-sources-body"),
-  complianceReviewsBody: document.getElementById("compliance-reviews-body")
+  complianceReviewsBody: document.getElementById("compliance-reviews-body"),
+
+  propertyResearchBody: document.getElementById("property-research-body"),
+  researchBusinessHoursBody: document.getElementById(
+    "research-business-hours-body"
+  )
 };
 
 function setStatus(text, state = "pending") {
@@ -76,6 +94,12 @@ function yesNo(value) {
 
 function locationLabel(row) {
   return [row.city, row.county, row.state_code]
+    .filter(Boolean)
+    .join(", ") || "—";
+}
+
+function propertyLocationLabel(row) {
+  return [row.city, row.state, row.postal_code]
     .filter(Boolean)
     .join(", ") || "—";
 }
@@ -209,6 +233,16 @@ if (!validConfig) {
       7,
       "Loading protected compliance reviews…"
     );
+    setTableMessage(
+      elements.propertyResearchBody,
+      6,
+      "Loading protected property-research data…"
+    );
+    setTableMessage(
+      elements.researchBusinessHoursBody,
+      4,
+      "Loading protected business-hours tasks…"
+    );
 
     const [
       leadCountResult,
@@ -222,33 +256,46 @@ if (!validConfig) {
       marketsResult,
       activityResult,
       complianceSourcesResult,
-      complianceReviewsResult
+      complianceReviewsResult,
+      researchPropertyCountResult,
+      researchOpenTaskCountResult,
+      researchBusinessHoursCountResult,
+      researchMf50CountResult,
+      propertyResearchResult,
+      researchBusinessHoursResult
     ] = await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
+
       supabase
         .from("buyers")
         .select("*", { count: "exact", head: true })
         .eq("active", true),
+
       supabase
         .from("markets")
         .select("*", { count: "exact", head: true })
         .eq("active", true),
+
       supabase
         .from("outbound_messages")
         .select("*", { count: "exact", head: true })
         .in("send_status", ["draft", "queued"]),
+
       supabase
         .from("compliance_sources")
         .select("*", { count: "exact", head: true })
         .eq("active", true),
+
       supabase
         .from("compliance_sources")
         .select("*", { count: "exact", head: true })
         .eq("active", true)
         .eq("requires_manual_review", true),
+
       supabase
         .from("compliance_reviews")
         .select("*", { count: "exact", head: true }),
+
       supabase
         .from("leads")
         .select(
@@ -256,6 +303,7 @@ if (!validConfig) {
         )
         .order("created_at", { ascending: false })
         .limit(10),
+
       supabase
         .from("markets")
         .select(
@@ -267,11 +315,13 @@ if (!validConfig) {
         .order("city", { ascending: true })
         .order("asset_class", { ascending: true })
         .limit(30),
+
       supabase
         .from("system_debugging_logs")
         .select("created_at, level, module_name, message")
         .order("created_at", { ascending: false })
         .limit(10),
+
       supabase
         .from("compliance_sources")
         .select(
@@ -280,12 +330,47 @@ if (!validConfig) {
         .eq("active", true)
         .order("state_code", { ascending: true })
         .limit(25),
+
       supabase
         .from("compliance_reviews")
         .select(
           "reviewed_at, finding, action_taken, requires_professional_review, next_review_due, markets(state_code, county, city, asset_class), compliance_sources(source_name, source_url)"
         )
         .order("reviewed_at", { ascending: false })
+        .limit(20),
+
+      supabase
+        .from("property_research_dashboard")
+        .select("*", { count: "exact", head: true }),
+
+      supabase
+        .from("property_research_task_dashboard")
+        .select("*", { count: "exact", head: true })
+        .in("task_status", ["open", "waiting"]),
+
+      supabase
+        .from("property_research_business_hours_queue")
+        .select("*", { count: "exact", head: true }),
+
+      supabase
+        .from("property_research_dashboard")
+        .select("*", { count: "exact", head: true })
+        .eq("asset_type", "multifamily_50_plus"),
+
+      supabase
+        .from("property_research_dashboard")
+        .select(
+          "id, property_address, city, state, postal_code, asset_type, research_status, unresolved_task_count, high_priority_task_count, next_task, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(20),
+
+      supabase
+        .from("property_research_business_hours_queue")
+        .select(
+          "property_research_id, property_address, city, state, postal_code, parcel_pin, task_name, responsible_party, prepared_question, priority, created_at"
+        )
+        .order("created_at", { ascending: false })
         .limit(20)
     ]);
 
@@ -296,7 +381,11 @@ if (!validConfig) {
       [messageCountResult, elements.messageCount],
       [complianceSourceCountResult, elements.complianceSourceCount],
       [manualReviewSourceCountResult, elements.manualReviewSourceCount],
-      [complianceReviewCountResult, elements.complianceReviewCount]
+      [complianceReviewCountResult, elements.complianceReviewCount],
+      [researchPropertyCountResult, elements.researchPropertyCount],
+      [researchOpenTaskCountResult, elements.researchOpenTaskCount],
+      [researchBusinessHoursCountResult, elements.researchBusinessHoursCount],
+      [researchMf50CountResult, elements.researchMf50Count]
     ];
 
     for (const [result, target] of countResults) {
@@ -442,8 +531,16 @@ if (!validConfig) {
 
           return `
             <tr>
-              <td>${escapeHtml(locationLabel(market || {}))} — ${escapeHtml(market?.asset_class)}</td>
-              <td>${safeExternalLink(source?.source_url, source?.source_name || "—")}</td>
+              <td>
+                ${escapeHtml(locationLabel(market || {}))}
+                — ${escapeHtml(market?.asset_class)}
+              </td>
+              <td>
+                ${safeExternalLink(
+                  source?.source_url,
+                  source?.source_name || "—"
+                )}
+              </td>
               <td>${escapeHtml(safeDate(review.reviewed_at))}</td>
               <td>${escapeHtml(review.finding)}</td>
               <td>${escapeHtml(review.action_taken)}</td>
@@ -453,6 +550,83 @@ if (!validConfig) {
           `;
         })
         .join("");
+    }
+
+    if (propertyResearchResult.error) {
+      console.error(
+        "Property research query failed:",
+        propertyResearchResult.error
+      );
+      setTableMessage(
+        elements.propertyResearchBody,
+        6,
+        "Protected property-research data could not be loaded."
+      );
+    } else if (!propertyResearchResult.data?.length) {
+      setTableMessage(
+        elements.propertyResearchBody,
+        6,
+        "No active property-research records found."
+      );
+    } else {
+      elements.propertyResearchBody.innerHTML = propertyResearchResult.data
+        .map(
+          (property) => `
+            <tr>
+              <td>
+                ${escapeHtml(property.property_address)}
+                <br>
+                <span class="table-muted">
+                  ${escapeHtml(propertyLocationLabel(property))}
+                </span>
+              </td>
+              <td>${escapeHtml(property.asset_type)}</td>
+              <td>${escapeHtml(property.research_status)}</td>
+              <td>${escapeHtml(property.unresolved_task_count)}</td>
+              <td>${escapeHtml(property.high_priority_task_count)}</td>
+              <td>${escapeHtml(property.next_task)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    if (researchBusinessHoursResult.error) {
+      console.error(
+        "Business-hours research queue query failed:",
+        researchBusinessHoursResult.error
+      );
+      setTableMessage(
+        elements.researchBusinessHoursBody,
+        4,
+        "Protected business-hours tasks could not be loaded."
+      );
+    } else if (!researchBusinessHoursResult.data?.length) {
+      setTableMessage(
+        elements.researchBusinessHoursBody,
+        4,
+        "No business-hours research tasks are pending."
+      );
+    } else {
+      elements.researchBusinessHoursBody.innerHTML =
+        researchBusinessHoursResult.data
+          .map(
+            (task) => `
+              <tr>
+                <td>
+                  ${escapeHtml(task.property_address)}
+                  <br>
+                  <span class="table-muted">
+                    ${escapeHtml(propertyLocationLabel(task))}
+                  </span>
+                </td>
+                <td>${escapeHtml(task.task_name)}</td>
+                <td>${escapeHtml(task.responsible_party)}</td>
+                <td>${escapeHtml(task.prepared_question)}</td>
+              </tr>
+            `
+          )
+          .join("");
     }
 
     const errors = [
@@ -467,7 +641,13 @@ if (!validConfig) {
       marketsResult.error,
       activityResult.error,
       complianceSourcesResult.error,
-      complianceReviewsResult.error
+      complianceReviewsResult.error,
+      researchPropertyCountResult.error,
+      researchOpenTaskCountResult.error,
+      researchBusinessHoursCountResult.error,
+      researchMf50CountResult.error,
+      propertyResearchResult.error,
+      researchBusinessHoursResult.error
     ].filter(Boolean);
 
     elements.ownerSessionMessage.textContent = errors.length
@@ -503,12 +683,16 @@ if (!validConfig) {
       ]);
 
       if (error) {
-        showLogin("Sign-in failed. Check your email and password, then try again.");
+        showLogin(
+          "Sign-in failed. Check your email and password, then try again."
+        );
         return;
       }
 
       if (!data?.user || !data?.session) {
-        throw new Error("Sign-in completed but no active session was returned.");
+        throw new Error(
+          "Sign-in completed but no active session was returned."
+        );
       }
 
       elements.password.value = "";
